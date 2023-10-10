@@ -1,0 +1,139 @@
+name: Generate Metrics
+
+on:
+  # Run automatically every 12 hours
+  schedule:
+    - cron: "0 */12 * * *"
+    
+  # Allows to manually run the job at any time
+  workflow_dispatch:
+
+  # Run on every push on the main/master branch
+  push: {branches: ["main", "master"]}
+  
+jobs:
+  github-metrics:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: General
+        if: ${{ success() || failure() }}
+        uses: lowlighter/metrics@latest
+        with:
+          filename: general-metrics.svg
+          token: ${{ secrets.METRICS_TOKEN }}
+          base: header, repositories
+          base_indepth: yes
+          config_order: base.header, base.repositories
+          output_action: gist
+          committer_gist: ${{ secrets.METRICS_GIST }}
+
+      - name: Extra
+        if: ${{ success() || failure() }}
+        uses: lowlighter/metrics@latest
+        with:
+          filename: extra-metrics.svg
+          token: ${{ secrets.METRICS_TOKEN }}
+          base: ""
+          output_action: gist
+          committer_gist: ${{ secrets.METRICS_GIST }}
+          config_order: notable, discussions
+          plugin_notable: yes
+          plugin_discussions: yes
+          plugin_topics: no
+          plugin_topics_limit: 0
+          plugin_topics_mode: icons
+
+      - name: Contributions Calendar
+        if: ${{ success() || failure() }}
+        uses: lowlighter/metrics@latest
+        with:
+          filename: contributions-calendar-metrics.svg
+          token: ${{ secrets.METRICS_TOKEN }}
+          base: ""
+          output_action: gist
+          committer_gist: ${{ secrets.METRICS_GIST }}
+          plugin_isocalendar: yes
+          plugin_isocalendar_duration: full-year
+
+      - name: Languages
+        if: ${{ success() || failure() }}
+        uses: lowlighter/metrics@latest
+        with:
+          filename: languages-metrics.svg
+          token: ${{ secrets.METRICS_TOKEN }}
+          base: ""
+          output_action: gist
+          committer_gist: ${{ secrets.METRICS_GIST }}
+          plugin_languages: yes
+          plugin_languages_limit: 6
+          plugin_languages_sections: most-used, recently-used
+          plugin_languages_details: lines, bytes-size, percentage
+          plugin_languages_indepth: yes
+
+      - name: Achievements
+        if: ${{ success() || failure() }}
+        uses: lowlighter/metrics@latest
+        with:
+          filename: achievements-metrics.svg
+          token: ${{ secrets.METRICS_TOKEN }}
+          base: ""
+          output_action: gist
+          committer_gist: ${{ secrets.METRICS_GIST }}
+          plugin_achievements: yes
+          plugin_achievements_display: compact
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Base64 Encode SVG
+        run: |
+          svg_url="https://github-profile-trophy.vercel.app/?username=darkshadowx&theme=onedark&no-frame=true&no-bg=true&column=6&margin-w=4"
+          svg_content=$(curl -s $svg_url)
+          encoded_svg_data=$(echo "$svg_content" | base64 -w 0)
+          cat << EOF > trophies-metrics.svg
+          <svg xmlns="http://www.w3.org/2000/svg" width="480" height="216" viewBox="0 20 680 260" fill="none">
+              <style xmlns="http://www.w3.org/2000/svg">
+                  svg {font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;font-size: 24px;color: #777}
+                  h2 {margin: 8px 0 2px;padding: 0;color: #0366d6;font-weight: 400;font-size:24px}
+                  .field {display: flex;align-items: center;margin: 2px 5px;white-space: nowrap}
+                  .field svg {margin: 0 8px;fill: #959da5;flex-shrink: 0}
+                  .row {display: flex;flex-wrap: wrap}
+                  .row section {flex: 1 1 0}
+              </style>
+              <foreignObject xmlns="http://www.w3.org/2000/svg" x="0" y="0" width="100%" height="100%">
+                  <div xmlns="http://www.w3.org/1999/xhtml" xmlns:xlink="http://www.w3.org/1999/xlink">
+                      <section>
+                          <h2 class="field">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="22" height="22">
+                                  <path fill-rule="evenodd" d="M3.217 6.962A3.75 3.75 0 010 3.25v-.5C0 1.784.784 1 1.75 1h1.356c.228-.585.796-1 1.462-1h6.864a1.57 1.57 0 011.462 1h1.356c.966 0 1.75.784 1.75 1.75v.5a3.75 3.75 0 01-3.217 3.712 5.014 5.014 0 01-2.771 3.117l.144 1.446c.005.05.03.12.114.204.086.087.217.17.373.227.283.103.618.274.89.568.285.31.467.723.467 1.226v.75h1.25a.75.75 0 110 1.5H2.75a.75.75 0 010-1.5H4v-.75c0-.503.182-.916.468-1.226.27-.294.606-.465.889-.568a1.03 1.03 0 00.373-.227c.084-.085.109-.153.114-.204l.144-1.446a5.014 5.014 0 01-2.77-3.117zM3 2.5H1.75a.25.25 0 00-.25.25v.5c0 .98.626 1.813 1.5 2.122V2.5zm4.457 7.97l-.12 1.204c-.093.925-.858 1.47-1.467 1.691a.764.764 0 00-.3.176c-.037.04-.07.093-.07.21v.75h5v-.75c0-.117-.033-.17-.07-.21a.763.763 0 00-.3-.176c-.609-.221-1.374-.766-1.466-1.69l-.12-1.204a5.052 5.052 0 01-1.087 0zM13 5.373V2.5h1.25a.25.25 0 01.25.25v.5A2.25 2.25 0 0113 5.372zM4.5 1.568c0-.037.03-.068.068-.068h6.864c.037 0 .068.03.068.068V5.5a3.5 3.5 0 11-7 0V1.568z"/>
+                              </svg>
+                              Trophies
+                          </h2>
+                          <div class="row">
+                              <img src="data:image/svg+xml;base64,$encoded_svg_data" alt="Trophies Metrics"/>
+                          </div>
+                      </section>
+                  </div>
+              </foreignObject>
+          </svg>
+          EOF
+
+      - name: Generate snake animation files
+        uses: Platane/snk@v3
+        with:
+          github_user_name: ${{ github.repository_owner }}
+          outputs: |
+            github-contribution-grid-snake.svg
+            github-contribution-grid-snake-dark.svg?palette=github-dark
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+      - name: Upload file to Gist
+        run: |
+          gh gist edit ${{ secrets.METRICS_GIST }} -f trophies-metrics.svg trophies-metrics.svg
+          gh gist edit ${{ secrets.METRICS_GIST }} -f github-contribution-grid-snake.svg github-contribution-grid-snake.svg
+          gh gist edit ${{ secrets.METRICS_GIST }} -f github-contribution-grid-snake-dark.svg github-contribution-grid-snake-dark.svg
+        env:
+          GITHUB_TOKEN: ${{ secrets.METRICS_TOKEN }}
